@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    EmailLoginView,
     ProductViewSet,
     StoreViewSet,
     StockViewSet,
@@ -19,7 +20,7 @@ from .views import (
     low_stock_alerts_api,
 
     # Auth
-    EmailTokenObtainPairView,
+   
     register_user,
 )
 
@@ -38,7 +39,8 @@ router.register(r"transactions", TransactionViewSet, basename="transactions")
 urlpatterns = [
 
     # -------- AUTH --------
-    path("auth/login/", EmailTokenObtainPairView.as_view(), name="token-login"),
+    path("auth/login/", EmailLoginView.as_view()),
+
     path("auth/register/", register_user, name="user-register"),
 
     # -------- CRUD --------

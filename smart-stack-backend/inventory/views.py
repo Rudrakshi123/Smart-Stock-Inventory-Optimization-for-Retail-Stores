@@ -5,13 +5,15 @@ import pandas as pd
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.db.models import Sum
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import EmailTokenObtainPairSerializer
 
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import BasePermission, SAFE_METHODS, IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework_simplejwt.views import TokenObtainPairView
+
 
 from .models import Product, Store, Stock, Transaction, ReorderPrediction
 from .serializers import (
@@ -223,12 +225,18 @@ def low_stock_alerts_api(request):
 
 # =========================
 # AUTH
-# =========================
-class EmailTokenObtainPairView(TokenObtainPairView):
+
+
+
+
+
+
+class EmailLoginView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
+    
+User = get_user_model()
 
-
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def register_user(request):
     email = request.data.get("email")
@@ -249,10 +257,14 @@ def register_user(request):
         username=email,
         email=email,
         password=password,
-        role=role
+        role=role,
     )
+
     if full_name:
         user.full_name = full_name
         user.save()
 
-    return Response({"success": "User created successfully"}, status=201)
+    return Response(
+        {"message": "User registered successfully"},
+        status=201
+    )

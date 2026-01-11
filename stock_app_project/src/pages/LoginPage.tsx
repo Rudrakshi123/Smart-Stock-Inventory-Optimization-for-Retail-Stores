@@ -1,269 +1,264 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth, UserRole } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Boxes, Loader2, Eye, EyeOff } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Boxes, Loader2, Eye, EyeOff } from "lucide-react";
+import { motion } from "framer-motion";
+import API from "@/integrations/api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, signup, isLoading } = useAuth();
+  const { loginWithToken, isLoading } = useAuth();
   const { toast } = useToast();
-  
+
   // Login state
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-  
+
   // Signup state
-  const [signupName, setSignupName] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupRole, setSignupRole] = useState<UserRole>('staff');
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupRole, setSignupRole] = useState<UserRole>("staff");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
 
+  // ---------------- LOGIN ----------------
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!loginEmail || !loginPassword) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all fields',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "Email and password are required",
+        variant: "destructive",
       });
       return;
     }
 
-    const result = await login(loginEmail, loginPassword);
-    
-    if (result.success) {
-      toast({
-        title: 'Welcome back!',
-        description: 'Login successful',
+    try {
+      const response = await API.post("/auth/login/", {
+        email: loginEmail,
+        password: loginPassword,
       });
-      navigate('/dashboard');
-    } else {
+
+      const token = response.data?.access;
+      if (!token) throw new Error("Token missing");
+
+      loginWithToken(token);
+      navigate("/dashboard");
+
       toast({
-        title: 'Login Failed',
-        description: result.error || 'Invalid credentials',
-        variant: 'destructive',
+        title: "Login successful",
+        description: "Welcome back",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description:
+          error?.response?.data?.detail || "Invalid credentials",
+        variant: "destructive",
       });
     }
   };
 
+  // ---------------- SIGNUP ----------------
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!signupName || !signupEmail || !signupPassword) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all fields',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "All fields are required",
+        variant: "destructive",
       });
       return;
     }
 
-    const result = await signup(signupEmail, signupPassword, signupName, signupRole);
-    
-    if (result.success) {
-      toast({
-        title: 'Account Created',
-        description: 'Welcome to SmartStock!',
+    try {
+      const response = await API.post("/auth/register/", {
+        name: signupName,
+        email: signupEmail,
+        password: signupPassword,
+        role: signupRole,
       });
-      navigate('/dashboard');
-    } else {
+
       toast({
-        title: 'Signup Failed',
-        description: result.error || 'An error occurred',
-        variant: 'destructive',
+        title: "Account created",
+        description: "Please login to continue",
+      });
+
+      // Prefill login
+      setLoginEmail(signupEmail);
+      setLoginPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Signup Failed",
+        description:
+          error?.response?.data?.detail ||
+          "Unable to create account",
+        variant: "destructive",
       });
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
-      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative w-full max-w-md"
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-md"
       >
-        {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl gradient-primary shadow-lg">
-            <Boxes className="w-7 h-7 text-primary-foreground" />
+          <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-primary text-white">
+            <Boxes />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">SmartStock</h1>
-            <p className="text-sm text-muted-foreground">Inventory Management</p>
+            <h1 className="text-2xl font-bold">SmartStock</h1>
+            <p className="text-sm text-muted-foreground">
+              Inventory Management
+            </p>
           </div>
         </div>
 
-        <Card className="border-border/50 shadow-xl">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl">Welcome</CardTitle>
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle>Welcome</CardTitle>
             <CardDescription>
-              Sign in to your account or create a new one
+              Login or create a new account
             </CardDescription>
           </CardHeader>
+
           <CardContent>
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
+            <Tabs defaultValue="login">
+              <TabsList className="grid grid-cols-2 mb-6">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
 
+              {/* LOGIN */}
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                  <div>
+                    <Label>Email</Label>
                     <Input
-                      id="login-email"
                       type="email"
-                      placeholder="Enter your email"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      disabled={isLoading}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+
+                  <div>
+                    <Label>Password</Label>
                     <div className="relative">
                       <Input
-                        id="login-password"
-                        type={showLoginPassword ? 'text' : 'password'}
-                        placeholder="Enter your password"
+                        type={showLoginPassword ? "text" : "password"}
                         value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        disabled={isLoading}
+                        onChange={(e) =>
+                          setLoginPassword(e.target.value)
+                        }
                         className="pr-10"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-1 top-1/2 -translate-y-1/2"
+                        onClick={() =>
+                          setShowLoginPassword(!showLoginPassword)
+                        }
                       >
                         {showLoginPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          <EyeOff className="h-4 w-4" />
                         ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          <Eye className="h-4 w-4" />
                         )}
                       </Button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+
+                  <Button className="w-full" type="submit">
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
+                        Signing in
                       </>
                     ) : (
-                      'Sign In'
+                      "Sign In"
                     )}
                   </Button>
                 </form>
-
-                <div className="mt-6 p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="text-sm font-medium text-foreground mb-2">Demo Credentials:</p>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <p><span className="font-medium">Manager:</span> manager@demo.com / demo1234</p>
-                    <p><span className="font-medium">Staff:</span> staff@demo.com / demo1234</p>
-                  </div>
-                </div>
               </TabsContent>
 
+              {/* SIGNUP */}
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Enter your name"
-                      value={signupName}
-                      onChange={(e) => setSignupName(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="signup-password"
-                        type={showSignupPassword ? 'text' : 'password'}
-                        placeholder="Create a password (min 6 chars)"
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        disabled={isLoading}
-                        className="pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                        onClick={() => setShowSignupPassword(!showSignupPassword)}
-                      >
-                        {showSignupPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-role">Role</Label>
-                    <Select value={signupRole} onValueChange={(value: UserRole) => setSignupRole(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="staff">Staff (Read-only access)</SelectItem>
-                        <SelectItem value="manager">Manager (Full access)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : (
-                      'Create Account'
-                    )}
+                  <Input
+                    placeholder="Full Name"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                  />
+                  <Input
+                    type={showSignupPassword ? "text" : "password"}
+                    placeholder="Password"
+                    value={signupPassword}
+                    onChange={(e) =>
+                      setSignupPassword(e.target.value)
+                    }
+                  />
+
+                  <Select
+                    value={signupRole}
+                    onValueChange={(v: UserRole) =>
+                      setSignupRole(v)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button className="w-full">
+                    Create Account
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
-
-        <p className="text-center mt-6 text-sm text-muted-foreground">
-          Smart Stock Inventory Optimization System
-        </p>
       </motion.div>
     </div>
   );

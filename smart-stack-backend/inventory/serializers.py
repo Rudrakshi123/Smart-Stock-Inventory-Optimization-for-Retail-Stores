@@ -15,41 +15,53 @@ from rest_framework import serializers
 
 User = get_user_model()
 
-class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
-    username_field = "email"
+from django.contrib.auth import authenticate, get_user_model
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed
 
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        # Inject custom claims
-        token["role"] = user.role
-        token["email"] = user.email
-        return token
+User = get_user_model()
+
+
+
+
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate, get_user_model
+from rest_framework.exceptions import AuthenticationFailed
+
+User = get_user_model()
+
+class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         email = attrs.get("email")
         password = attrs.get("password")
 
         if not email or not password:
-            raise serializers.ValidationError("Email and password are required")
+            raise AuthenticationFailed("Email and password are required")
 
-        user = authenticate(username=email, password=password)
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise AuthenticationFailed("Invalid credentials")
+
+        user = authenticate(username=user.username, password=password)
         if not user:
-            raise serializers.ValidationError("Invalid credentials")
+            raise AuthenticationFailed("Invalid credentials")
 
-        data = super().validate({
-            self.username_field: email,
-            "password": password
-        })
+        # ✅ MANUAL TOKEN CREATION (this is the fix)
+        refresh = RefreshToken.for_user(user)
 
-        # Extra info for response payload
-        data["email"] = user.email
-        data["role"] = user.role
+        data = {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }
+
+        if hasattr(user, "role"):
+            data["role"] = user.role
+
         return data
 
-# =========================
-# STORE
-# =========================
 class StoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Store
